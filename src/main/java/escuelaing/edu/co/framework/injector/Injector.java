@@ -24,13 +24,17 @@ public class Injector {
         reflections = new Reflections(packageName);
     }
 
-    public static void startApp(Class<?> mainClass) {
+    public static void startApp(Class<?> mainClass, Boolean debug) {
+        buildApp(mainClass, debug);
+    }
+
+    private static void buildApp(Class<?> mainClass, Boolean debug) {
         try{
             synchronized (Injector.class) {
                 if (instance == null){
                     instance = new Injector(mainClass.getPackageName());
                 }
-                instance.init();
+                instance.init(debug);
             }
         } catch (Exception e) {
             e.printStackTrace();
@@ -38,14 +42,21 @@ public class Injector {
         }
     }
 
+    public static void startApp(Class<?> mainClass) {
+        buildApp(mainClass, false);
+    }
+
     /**
      * This method initiates the Injector with the provided
      * main Class (The Main Class should be at the root of the src files).
      * (and Server if @ResteController is detected)
      */
-    public void init() throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException{
+    private void init(Boolean debug) throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException{
         solveDependencies();
         solveControllers();
+        if (debug) return;
+        System.out.println("Starting Server");
+        HTTPServerImpl.start(8080);
     }
 
     private void solveControllers() throws NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException {
@@ -59,10 +70,8 @@ public class Injector {
             injectClass(c);
             String rootPath = c.getAnnotation(RestController.class).value();
             solveGetMappings(c, rootPath);
+            System.out.println("Controllers Injection completed");
         }
-        System.out.println("Starting Server");
-        HTTPServerImpl.start(8080);
-
     }
 
     private void solveGetMappings(Class<?> c, String path) {
